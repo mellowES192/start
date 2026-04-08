@@ -1,33 +1,27 @@
+
 #!/bin/sh
 echo "Starting setup Linux please wait"
 pkill xray
 pkill tun2socks
 sleep 1
-
 # Заполните данные переменные из конфигурации клиента для Xray 3x-ui
-SERVER_ADDRESS=***
-SERVER_PORT=***
-ID=***
-ENCRYPTION=***
-FLOW=***
-FP=***
-SNI=***
-PBK=***
-SID=***
-SPX=***
-PQV=***
-GATEWAY=***
-ADAPTER_NAME=***
-
-
+SERVER_ADDRESS=chilipizdrik.duckdns.org
+SERVER_PORT=443
+ID=e8e7ec22-ddda-49d4-a09e-0e2d05b7c6e8
+ENCRYPTION=none
+FP=chrome
+SNI=web.max.ru
+PBK=UsO5QCaWGMTHhz9MUFluenCgv-6VQyfy4YbQ7Y7FyGE
+SID=b8fad8e950cad232
+SPX=/
+GATEWAY=172.15.0.1
+ADAPTER_NAME=eno1
 # Получение IP-адреса
 SERVER_IP_ADDRESS=$(getent ahosts $SERVER_ADDRESS | head -n 1 | awk '{print $1}')
-
 if [ -z "$SERVER_IP_ADDRESS" ]; then
   echo "Failed to obtain an IP address for FQDN $SERVER_ADDRESS"
   exit 1
 fi
-
 # Сетевые настройки
 ip tuntap del mode tun dev tun0
 ip tuntap add mode tun dev tun0
@@ -41,14 +35,11 @@ ip route add 8.8.4.4/32 via $GATEWAY
 ip route add 192.168.0.0/16 via $GATEWAY
 ip route add 10.0.0.0/8 via $GATEWAY
 ip route add 172.16.0.0/12 via $GATEWAY
-
-
 # Обновление resolv.conf
 rm -f /etc/resolv.conf
 tee -a /etc/resolv.conf <<< "nameserver $GATEWAY"
 tee -a /etc/resolv.conf <<< "nameserver 1.0.0.1"
 tee -a /etc/resolv.conf <<< "nameserver 8.8.4.4"
-
 # Генерация конфигурации для Xray
 cat <<EOF > /opt/xray/config/config.json
 {
@@ -65,7 +56,7 @@ cat <<EOF > /opt/xray/config/config.json
       },
       "sniffing": {
         "enabled": true,
-        "destOverride": ["http", "tls", "quic"],
+        "destOverride": ["http", "tls","quic"],
 		"routeOnly": true
       }
     }
@@ -90,22 +81,21 @@ cat <<EOF > /opt/xray/config/config.json
         ]
       },
       "streamSettings": {
-        "network": "tcp",
+        "network": "xhttp",
         "security": "reality",
         "realitySettings": {
           "fingerprint": "$FP",
           "serverName": "$SNI",
           "publicKey": "$PBK",
           "shortId": "$SID",
-		  "spx": "$SPX",
-		  "pqv":"$PQV"
+		  "spx": "$SPX"
         }
       }
     }
   ],
   "routing": {
-    "domainStrategy": "AsIs",
-    "rules": []
+	"domainStrategy": "AsIs",
+        "rules": []
   }
 }
 EOF
